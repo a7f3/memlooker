@@ -79,7 +79,7 @@ fn main() {
     let procs = enumerate_processes().unwrap_or(Vec::new());
 
     for proc in procs.iter() {
-        if proc.name().unwrap().contains(&String::from("decrment")) {
+        if proc.name().unwrap().contains(&String::from("decrement")) {
             dbg!(proc);
             dbg!(proc.name().unwrap());
         }
