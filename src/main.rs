@@ -9,6 +9,26 @@ pub struct Process {
     dir: DirEntry,
 }
 
+struct Addr {
+    a: u32,
+}
+
+enum Perms {
+    Read(bool),
+    Write(bool),
+    Execute(bool),
+    Shared(bool),
+    Private(bool), /* copy on write */
+}
+
+struct MemoryRegions {
+    start: Addr,
+    end: Addr,
+    offset: Addr,
+    perms: Perms,
+    path: Path,
+}
+
 impl Process {
     pub fn name(&self) -> Result<String, io::Error> {
         let path_string = format!("/proc/{}/cmdline", self.pid); //fix
@@ -23,10 +43,14 @@ impl Process {
         }
     }
 
-    pub fn memory_regions(&self) {
+    pub fn memory_regions(&self) -> Result<MemoryRegions> {
         let maps_path = String::from(format!("/proc/{}/maps", self.pid));
-        let contents = fs::read_to_string(maps_path).expect("Cannot read file");
+        let contents = match fs::read_to_string(maps_path) {
+            Err(e) => return e,
+            Ok(maps) =>  maps.split('\n'),
+        };
         println!("{contents}");
+        todo!()
     }
 }
 
@@ -63,6 +87,7 @@ fn enumerate_processes() -> Option<Vec<Process>> {
     }
     return None;
 }
+
 fn print_all_procs() {
     let procs = enumerate_processes().unwrap_or(Vec::new());
 
