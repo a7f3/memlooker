@@ -1,32 +1,10 @@
 use std::fs;
-use std::fs::DirEntry;
 use std::io;
 use std::path::Path;
 
 #[derive(Debug)]
 pub struct Process {
     pid: u32,
-    dir: DirEntry,
-}
-
-struct Addr {
-    a: u32,
-}
-
-enum Perms {
-    Read(bool),
-    Write(bool),
-    Execute(bool),
-    Shared(bool),
-    Private(bool), /* copy on write */
-}
-
-struct MemoryRegions {
-    start: Addr,
-    end: Addr,
-    offset: Addr,
-    perms: Perms,
-    path: Path,
 }
 
 impl Process {
@@ -43,14 +21,31 @@ impl Process {
         }
     }
 
-    pub fn memory_regions(&self) -> Result<MemoryRegions> {
+    pub fn memory_regions(&self) {
         let maps_path = String::from(format!("/proc/{}/maps", self.pid));
-        let contents = match fs::read_to_string(maps_path) {
-            Err(e) => return e,
-            Ok(maps) =>  maps.split('\n'),
+        let contents = match fs::read_to_string(&maps_path) {
+            Err(_) => todo!(),
+            Ok(maps) => maps,
         };
-        println!("{contents}");
-        todo!()
+
+        for line in contents.split("\n") {
+            for section in line.split_whitespace() {
+                println!("{}", section);
+            }
+        }
+    }
+}
+
+impl Process {
+    pub fn new(pid: u32) -> Option<Self> {
+        if pid == 0 {
+            return None;
+        }
+        if Path::new(&format!("/proc/{}/", pid)).exists() {
+            return Some(Self { pid });
+        } else {
+            return None;
+        }
     }
 }
 
@@ -61,23 +56,24 @@ fn enumerate_processes() -> Option<Vec<Process>> {
     for entry in fs::read_dir(path).expect("Unable to list") {
         let entry = entry.expect("unable to get entry");
         if entry.path().is_dir() {
-            if entry
+            let pid: Option<u32> = match entry
                 .file_name()
                 .into_string()
                 .expect("not a interger type path")
                 .parse::<u32>()
-                .is_ok()
             {
-                let proc = Process {
-                    pid: entry
-                        .file_name()
-                        .into_string()
-                        .expect("not an interger")
-                        .parse::<u32>()
-                        .unwrap(),
-                    dir: entry,
-                };
-                procs.push(proc);
+                Ok(pid) => Some(pid),
+                Err(_) => None,
+            };
+            match pid {
+                None => continue,
+                Some(pid) => {
+                    let proc = Process::new(pid);
+                    match proc {
+                        Some(proc) => procs.push(proc),
+                        None => continue,
+                    }
+                }
             }
         }
     }
@@ -103,10 +99,12 @@ fn print_all_procs() {
 fn main() {
     let procs = enumerate_processes().unwrap_or(Vec::new());
 
-    for proc in procs.iter() {
-        if proc.name().unwrap().contains(&String::from("decrement")) {
-            dbg!(proc);
-            dbg!(proc.name().unwrap());
-        }
-    }
+    let mut procs = procs.iter();
+
+    let proc: Option<Process> =
+        procs.find_map(|proc| match proc.name().unwrap().contains("decrement") {
+            true => Some(Process { pid: proc.pid }),
+            false => None,
+        });
+    dbg!(proc.unwrap());
 }
