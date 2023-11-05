@@ -1,4 +1,4 @@
-use crate::Process::address::{Address, AddressRange};
+use crate::process::address::{Address, AddressRange};
 
 #[derive(Debug)]
 struct Perms {

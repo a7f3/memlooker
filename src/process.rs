@@ -1,7 +1,7 @@
 mod address;
 mod memory_region;
 
-use crate::Process::memory_region::MemoryRegion;
+use memory_region::MemoryRegion;
 use std::fs;
 use std::io;
 use std::path::Path;
