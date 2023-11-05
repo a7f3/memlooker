@@ -17,46 +17,119 @@ struct Perms {
 }
 
 #[derive(Debug)]
-struct Addr {
-    a: u64,
+struct Address {
+    addr: u64,
+}
+
+impl Address {
+    fn new_from_str(addr_str: &str) -> Option<Self> {
+        return match u64::from_str_radix(addr_str, 16) {
+            Err(e) => panic!("Could not parse int: {}", e),
+            Ok(addr) => Some(Address { addr }),
+        };
+    }
 }
 
 #[derive(Debug)]
-struct AddrRange {
-    start: u64,
-    end: u64,
+struct AddressRange {
+    start: Address,
+    end: Address,
 }
 
 #[derive(Debug)]
 struct MemoryRegion {
-    addr: AddrRange,
+    addr_range: AddressRange,
     perms: Perms,
-    offset: Addr,
+    offset: Address,
     pathname: String,
 }
 
-impl AddrRange {
-    fn new(start: u64, end: u64) -> Self {
-        AddrRange { start, end }
+impl AddressRange {
+    fn new_from_str(s: &str) -> Self {
+        /* Parses the first split into a AddressRange*/
+        let mut a = s.split("-");
+
+        let start = match a.next() {
+            None => panic!("cannot make addr from str"),
+            Some(hex_str) => match Address::new_from_str(hex_str) {
+                Some(a) => a,
+                None => panic!("cannot make addr from str"),
+            },
+        };
+
+        let end = match a.next() {
+            None => panic!("cannot make addr from str"),
+            Some(hex_str) => match Address::new_from_str(hex_str) {
+                Some(a) => a,
+                None => panic!("cannot make addr from str"),
+            },
+        };
+
+        AddressRange { start, end }
+    }
+}
+
+impl Perms {
+    fn new_from_str(perms: &str) -> Self {
+        if perms.len() != 4 {
+            panic!("Length of perms not correct");
+        }
+
+        let mut read: bool = false;
+        let mut write: bool = false;
+        let mut execute: bool = false;
+        let mut private: bool = false;
+        let mut shared: bool = false;
+
+        for c in perms.chars() {
+            if c == 'r' {
+                read = true;
+            }
+            if c == 'w' {
+                write = true;
+            }
+            if c == 'e' {
+                execute = true;
+            }
+            if c == 'p' {
+                private = true;
+            }
+            if c == 's' {
+                shared = true;
+            }
+        }
+
+        Perms {
+            read,
+            write,
+            execute,
+            shared,
+            private,
+        }
     }
 }
 
 impl MemoryRegion {
-    fn new_from_maps(line: &str) -> Option<Self> {
+    fn new_from_str(line: &str) -> Option<Self> {
         let mut split_line = line.split_whitespace();
 
-        /* Parses the first split into a AddrRange */
-        let addr_range: (&str, &str) = match split_line.next() {
-            Some(s) => {
-                let mut a = s.split("-");
-                (a.next().unwrap(), a.next().unwrap())
-            }
-            None => return None,
-        };
-        let addr_range =
-            AddrRange::new(addr_range.0.parse().unwrap(), addr_range.1.parse().unwrap());
+        let addr_range = AddressRange::new_from_str(split_line.next()?);
 
-        return None;
+        /* Parses the second split into a Perms */
+        let perms = match split_line.next() {
+            None => return None,
+            Some(p) => Perms::new_from_str(p),
+        };
+
+        let offset = Address::new_from_str(split_line.next()?)?;
+        let pathname = split_line.last()?.to_string();
+
+        return Some(MemoryRegion {
+            addr_range,
+            perms,
+            offset,
+            pathname,
+        });
     }
 }
 
@@ -74,15 +147,24 @@ impl Process {
         }
     }
 
-    pub fn memory_regions(&self) {
+    pub fn get_all_memory_regions(&self) -> Vec<MemoryRegion> {
         let maps_path = String::from(format!("/proc/{}/maps", self.pid));
         let contents = match fs::read_to_string(&maps_path) {
             Err(e) => panic!("ERROR {}: Cannot access /proc/{}/maps", e, self.pid),
             Ok(maps) => maps,
         };
 
-        let line = contents.split("\n").into_iter().next().unwrap();
-        dbg!(MemoryRegion::new_from_maps(line));
+        let mut regions: Vec<MemoryRegion> = Vec::<MemoryRegion>::new();
+
+        for line in contents.split("\n").into_iter() {
+            let region = match MemoryRegion::new_from_str(line) {
+                Some(region) => region,
+                None => continue,
+            };
+
+            regions.push(region);
+        }
+        return regions;
     }
 }
 
@@ -149,5 +231,5 @@ fn main() {
         Some(p) => p,
     };
 
-    dbg!(proc.memory_regions());
+    dbg!(proc.get_all_memory_regions());
 }
