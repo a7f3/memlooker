@@ -4,7 +4,7 @@ pub struct Address {
 }
 
 #[derive(Debug)]
-pub struct AddressRange {
+pub struct Range {
     start: Address,
     end: Address,
 }
@@ -18,7 +18,7 @@ impl Address {
     }
 }
 
-impl AddressRange {
+impl Range {
     pub fn new_from_str(s: &str) -> Self {
         /* Parses the first split into a AddressRange*/
         let mut a = s.split("-");
@@ -39,7 +39,11 @@ impl AddressRange {
             },
         };
 
-        AddressRange { start, end }
+        if start.addr > end.addr {
+            panic!("starting address can't be more than the end address");
+        }
+
+        Range { start, end }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::process::address::{Address, AddressRange};
+use crate::process::address;
 
 #[derive(Debug)]
 struct Perms {
@@ -11,9 +11,9 @@ struct Perms {
 
 #[derive(Debug)]
 pub struct MemoryRegion {
-    addr_range: AddressRange,
+    addr_range: address::Range,
     perms: Perms,
-    offset: Address,
+    offset: address::Address,
     pathname: String,
 }
 
@@ -61,7 +61,7 @@ impl MemoryRegion {
     pub fn new_from_str(line: &str) -> Option<Self> {
         let mut split_line = line.split_whitespace();
 
-        let addr_range = AddressRange::new_from_str(split_line.next()?);
+        let addr_range = address::Range::new_from_str(split_line.next()?);
 
         /* Parses the second split into a Perms */
         let perms = match split_line.next() {
@@ -69,7 +69,7 @@ impl MemoryRegion {
             Some(p) => Perms::new_from_str(p),
         };
 
-        let offset = Address::new_from_str(split_line.next()?)?;
+        let offset = address::Address::new_from_str(split_line.next()?)?;
         let pathname = split_line.last()?.to_string();
 
         return Some(MemoryRegion {
