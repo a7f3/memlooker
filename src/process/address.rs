@@ -12,7 +12,7 @@ pub struct AddressRange {
 impl Address {
     pub fn new_from_str(addr_str: &str) -> Option<Self> {
         return match u64::from_str_radix(addr_str, 16) {
-            Err(e) => panic!("Could not parse int: {}", e),
+            Err(_) => None,
             Ok(addr) => Some(Address { addr }),
         };
     }
@@ -40,5 +40,44 @@ impl AddressRange {
         };
 
         AddressRange { start, end }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn negitive() {
+        match Address::new_from_str("-1234567890abcdef") {
+            Some(_) => panic!(),
+            None => 0,
+        };
+    }
+
+    #[test]
+    fn positive() {
+        match Address::new_from_str("1234567890abcdef") {
+            Some(a) => assert_eq!(a.addr, 0x1234567890abcdef),
+            None => panic!(),
+        };
+    }
+
+    #[test]
+    fn non_hex() {
+        match Address::new_from_str("1234567890abcdefg") {
+            Some(_) => panic!(),
+            None => 0,
+        };
+    }
+
+    #[test]
+    fn too_big() {
+        let max_plus_one = format!("{:0x}1", u64::max_value());
+
+        match Address::new_from_str(&max_plus_one) {
+            Some(_) => panic!(),
+            None => 0,
+        };
     }
 }
