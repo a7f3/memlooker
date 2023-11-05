@@ -7,6 +7,59 @@ struct Process {
     pid: u32,
 }
 
+#[derive(Debug)]
+struct Perms {
+    read: bool,
+    write: bool,
+    execute: bool,
+    shared: bool,
+    private: bool, /* copy on write*/
+}
+
+#[derive(Debug)]
+struct Addr {
+    a: u64,
+}
+
+#[derive(Debug)]
+struct AddrRange {
+    start: u64,
+    end: u64,
+}
+
+#[derive(Debug)]
+struct MemoryRegion {
+    addr: AddrRange,
+    perms: Perms,
+    offset: Addr,
+    pathname: String,
+}
+
+impl AddrRange {
+    fn new(start: u64, end: u64) -> Self {
+        AddrRange { start, end }
+    }
+}
+
+impl MemoryRegion {
+    fn new_from_maps(line: &str) -> Option<Self> {
+        let mut split_line = line.split_whitespace();
+
+        /* Parses the first split into a AddrRange */
+        let addr_range: (&str, &str) = match split_line.next() {
+            Some(s) => {
+                let mut a = s.split("-");
+                (a.next().unwrap(), a.next().unwrap())
+            }
+            None => return None,
+        };
+        let addr_range =
+            AddrRange::new(addr_range.0.parse().unwrap(), addr_range.1.parse().unwrap());
+
+        return None;
+    }
+}
+
 impl Process {
     pub fn name(&self) -> Result<String, io::Error> {
         let path_string = format!("/proc/{}/cmdline", self.pid);
@@ -28,11 +81,8 @@ impl Process {
             Ok(maps) => maps,
         };
 
-        for line in contents.split("\n") {
-            for section in line.split_whitespace() {
-                println!("{}", section);
-            }
-        }
+        let line = contents.split("\n").into_iter().next().unwrap();
+        dbg!(MemoryRegion::new_from_maps(line));
     }
 }
 
