@@ -103,7 +103,15 @@ impl MemoryRegion {
         };
 
         let offset = address::Address::new_from_str(split_line.next()?)?;
-        let pathname = split_line.last()?.to_string();
+
+        /* skip to the last element */
+        split_line.next();
+        split_line.next();
+
+        let pathname = match split_line.next() {
+            Some(s) => s.to_string(),
+            None => "".to_string(),
+        };
 
         return Some(MemoryRegion {
             addr_range,
