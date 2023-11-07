@@ -1,6 +1,7 @@
-use std::fmt;
-
 use crate::process::address;
+use std::fmt;
+use std::fs::File;
+use std::io::{self, prelude::*, SeekFrom};
 
 #[derive(Debug)]
 struct Perms {
@@ -119,5 +120,54 @@ impl MemoryRegion {
             offset,
             pathname,
         });
+    }
+
+    fn read_4_bytes(&self, f: &mut File, offset: u64, buffer: &mut [u8]) -> u64 {
+        let _ = f.read_exact(buffer);
+        let _ = f.seek(SeekFrom::Start(offset));
+        return offset + buffer.len() as u64;
+    }
+
+    pub fn as_u32_be(array: &[u8; 4]) -> u32 {
+        ((array[0] as u32) << 24)
+            + ((array[1] as u32) << 16)
+            + ((array[2] as u32) << 8)
+            + ((array[3] as u32) << 0)
+    }
+
+    pub fn read_mem(&self, pid: u32) {
+        if !self.perms.read {
+            return;
+        }
+
+        let mut f = match File::open(format!("/proc/{}/mem", pid)) {
+            Ok(f) => f,
+            Err(e) => panic!("cannot open /proc/{pid}/mem: {e}"),
+        };
+
+        let mut offset = self.addr_range.start.addr;
+        let mut buffer = [0_u8; 4];
+        let mut a = 0;
+
+        /*self.read_4_bytes(&mut f, 94773577019228_u64, &mut buffer);
+        println!("{}", Self::as_u32_be(&buffer));*/
+
+        while offset < self.addr_range.end.addr {
+            offset = self.read_4_bytes(&mut f, offset, &mut buffer);
+
+            let num = Self::as_u32_be(&buffer);
+            if num == 51 {
+                println!("{}: {}", offset, num);
+            }
+
+            /* for i in buffer {
+                if i == 0 {
+                    print!("..");
+                } else {
+                    print!("{:02x}", i);
+                }
+            }*/
+            a += 1;
+        }
     }
 }

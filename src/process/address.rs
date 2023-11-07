@@ -2,13 +2,13 @@ use std::fmt;
 
 #[derive(Debug)]
 pub struct Address {
-    addr: u64,
+    pub addr: u64,
 }
 
 #[derive(Debug)]
 pub struct Range {
-    start: Address,
-    end: Address,
+    pub start: Address,
+    pub end: Address,
 }
 
 impl fmt::Display for Address {

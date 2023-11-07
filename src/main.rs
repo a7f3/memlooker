@@ -58,5 +58,6 @@ fn main() {
 
     for region in proc.get_all_memory_regions() {
         println!("{}", region);
+        region.read_mem(proc.pid);
     }
 }
