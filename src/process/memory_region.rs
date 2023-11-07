@@ -26,7 +26,7 @@ impl fmt::Display for Perms {
             "{}{}{}{}",
             if self.read { "r" } else { "-" },
             if self.write { "w" } else { "-" },
-            if self.execute { "e" } else { "-" },
+            if self.execute { "x" } else { "-" },
             if self.private {
                 "p"
             } else {
@@ -59,7 +59,7 @@ impl Perms {
             if c == 'w' {
                 write = true;
             }
-            if c == 'e' {
+            if c == 'x' {
                 execute = true;
             }
             if c == 'p' {
