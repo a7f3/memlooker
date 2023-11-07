@@ -7,6 +7,7 @@ mod process;
 
 fn get_all_pids() -> Option<Vec<Process>> {
     let mut procs: Vec<Process> = Vec::new();
+
     let path = Path::new("/proc");
 
     for entry in fs::read_dir(path).expect("Unable to list") {
@@ -55,5 +56,7 @@ fn main() {
         Some(p) => p,
     };
 
-    dbg!(proc.get_all_memory_regions());
+    for region in proc.get_all_memory_regions() {
+        println!("{}", region);
+    }
 }

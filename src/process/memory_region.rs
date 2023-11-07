@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::process::address;
 
 #[derive(Debug)]
@@ -15,6 +17,27 @@ pub struct MemoryRegion {
     perms: Perms,
     offset: address::Address,
     pathname: String,
+}
+
+impl fmt::Display for Perms {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}{}{}",
+            if self.read { "r" } else { "-" },
+            if self.write { "w" } else { "-" },
+            if self.execute { "e" } else { "-" },
+            if self.private {
+                "p"
+            } else {
+                if self.shared {
+                    "s"
+                } else {
+                    "-"
+                }
+            }
+        )
+    }
 }
 
 impl Perms {
@@ -54,6 +77,16 @@ impl Perms {
             shared,
             private,
         }
+    }
+}
+
+impl fmt::Display for MemoryRegion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {} {}",
+            self.addr_range, self.perms, self.offset, self.pathname
+        )
     }
 }
 

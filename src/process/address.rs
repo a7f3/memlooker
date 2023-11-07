@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug)]
 pub struct Address {
     addr: u64,
@@ -9,12 +11,24 @@ pub struct Range {
     end: Address,
 }
 
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:08x}", self.addr)
+    }
+}
+
 impl Address {
     pub fn new_from_str(addr_str: &str) -> Option<Self> {
         return match u64::from_str_radix(addr_str, 16) {
             Err(_) => None,
             Ok(addr) => Some(Address { addr }),
         };
+    }
+}
+
+impl fmt::Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:0x}-{:0x}", self.start.addr, self.end.addr)
     }
 }
 
