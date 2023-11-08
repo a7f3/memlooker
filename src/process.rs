@@ -1,4 +1,4 @@
-mod address;
+pub mod address;
 mod memory_region;
 use memory_region::MemoryRegion;
 

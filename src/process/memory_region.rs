@@ -3,6 +3,8 @@ use std::fmt;
 use std::fs::File;
 use std::io::{self, prelude::*, SeekFrom};
 
+use super::address::Address;
+
 #[derive(Debug)]
 struct Perms {
     read: bool,
@@ -135,9 +137,24 @@ impl MemoryRegion {
             + ((array[3] as u32) << 0)
     }
 
-    pub fn read_mem(&self, pid: u32) {
+    fn as_u32_le(array: &[u8; 4]) -> u32 {
+        ((array[0] as u32) << 0)
+            + ((array[1] as u32) << 8)
+            + ((array[2] as u32) << 16)
+            + ((array[3] as u32) << 24)
+    }
+
+    fn as_u32(array: &[u8; 4]) -> u32 {
+        if cfg!(target_endian = "big") {
+            Self::as_u32_be(array)
+        } else {
+            Self::as_u32_le(array)
+        }
+    }
+
+    pub fn read_mem(&self, pid: u32, target: u32) -> Option<Vec<Address>> {
         if !self.perms.read {
-            return;
+            return None;
         }
 
         let mut f = match File::open(format!("/proc/{}/mem", pid)) {
@@ -147,27 +164,18 @@ impl MemoryRegion {
 
         let mut offset = self.addr_range.start.addr;
         let mut buffer = [0_u8; 4];
-        let mut a = 0;
-
-        /*self.read_4_bytes(&mut f, 94773577019228_u64, &mut buffer);
-        println!("{}", Self::as_u32_be(&buffer));*/
+        let mut addr_list: Vec<Address> = Vec::<Address>::new();
 
         while offset < self.addr_range.end.addr {
             offset = self.read_4_bytes(&mut f, offset, &mut buffer);
 
-            let num = Self::as_u32_be(&buffer);
-            if num == 51 {
-                println!("{}: {}", offset, num);
+            let num = Self::as_u32(&buffer);
+            if num == target {
+                println!("{:0x}: {}", offset, num);
+                addr_list.push(Address { addr: offset });
             }
-
-            /* for i in buffer {
-                if i == 0 {
-                    print!("..");
-                } else {
-                    print!("{:02x}", i);
-                }
-            }*/
-            a += 1;
         }
+
+        return Some(addr_list);
     }
 }

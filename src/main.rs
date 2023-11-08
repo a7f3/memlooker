@@ -1,6 +1,8 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 
+use crate::process::address::Address;
 use crate::process::Process;
 
 mod process;
@@ -50,14 +52,54 @@ fn get_proc_by_name(name: &str) -> Option<Process> {
     })
 }
 
+fn get_target(proc: &Process, target: u32) -> Vec<Address> {
+    let mut addr_list = Vec::<Address>::new();
+    for region in proc.get_all_memory_regions() {
+        match region.read_mem(proc.pid, target) {
+            Some(a) => {
+                let mut b = a;
+                addr_list.append(&mut b)
+            }
+            None => (),
+        }
+    }
+
+    return addr_list;
+}
+
 fn main() {
     let proc = match get_proc_by_name("decrement") {
         None => panic!("Unable to find process!"),
         Some(p) => p,
     };
 
-    for region in proc.get_all_memory_regions() {
-        println!("{}", region);
-        region.read_mem(proc.pid);
+    let mut addr_list: Vec<Address> = Vec::<Address>::new();
+    let mut old_addr_list: Vec<Address> = Vec::<Address>::new();
+
+    loop {
+        println!("Please input a number: ");
+        let mut line = String::new();
+        let _ = io::stdin().read_line(&mut line);
+
+        let target: u32 = match line.trim().parse() {
+            Ok(num) => num,
+            Err(e) => {
+                println!("Error: {}", e);
+                continue;
+            }
+        };
+
+        old_addr_list = addr_list.clone();
+        let mut addr_list = get_target(&proc, target);
+        dbg!(&addr_list);
+        if addr_list.len() > 1 {
+            addr_list = addr_list
+                .clone()
+                .into_iter()
+                .filter(|item| old_addr_list.contains(item))
+                .collect::<Vec<Address>>();
+        }
+
+        dbg!(&addr_list);
     }
 }
