@@ -89,17 +89,18 @@ fn main() {
             }
         };
 
-        old_addr_list = addr_list.clone();
-        let mut addr_list = get_target(&proc, target);
-        dbg!(&addr_list);
-        if addr_list.len() > 1 {
-            addr_list = addr_list
-                .clone()
-                .into_iter()
-                .filter(|item| old_addr_list.contains(item))
-                .collect::<Vec<Address>>();
+        /* run this once to get the lists started */
+        if old_addr_list.len() == 0 {
+            addr_list = get_target(&proc, target);
         }
 
+        old_addr_list = addr_list.clone();
+        addr_list = get_target(&proc, target);
+        addr_list = addr_list
+            .clone()
+            .into_iter()
+            .filter(|item| old_addr_list.contains(item))
+            .collect::<Vec<Address>>();
         dbg!(&addr_list);
     }
 }
