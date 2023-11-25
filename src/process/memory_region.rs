@@ -19,7 +19,7 @@ pub struct MemoryRegion {
     addr_range: address::Range,
     perms: Perms,
     offset: address::Address,
-    pathname: String,
+    pub pathname: String,
 }
 
 impl fmt::Display for Perms {
@@ -151,6 +151,37 @@ impl MemoryRegion {
             Self::as_u32_le(array)
         }
     }
+    pub fn read_mem_from_addr_list(
+        &self,
+        pid: u32,
+        addrs: &Vec<Address>,
+        target: u32,
+    ) -> Option<Vec<Address>> {
+        if !self.perms.read {
+            return None;
+        }
+
+        let mut f = match File::open(format!("/proc/{}/mem", pid)) {
+            Ok(f) => f,
+            Err(e) => panic!("cannot open /proc/{pid}/mem: {e}"),
+        };
+
+        let mut addr_list: Vec<Address> = Vec::<Address>::new();
+        for addr in addrs {
+            if addr.addr < self.addr_range.start.addr || addr.addr > self.addr_range.end.addr {
+                continue;
+            }
+            let mut buffer = [0_u8; 4];
+
+            let _ = self.read_4_bytes(&mut f, addr.addr, &mut buffer);
+
+            let num = Self::as_u32(&buffer);
+            if num == target {
+                addr_list.push(addr.clone());
+            }
+        }
+        return Some(addr_list);
+    }
 
     pub fn read_mem(&self, pid: u32, target: u32) -> Option<Vec<Address>> {
         if !self.perms.read {
@@ -171,11 +202,93 @@ impl MemoryRegion {
 
             let num = Self::as_u32(&buffer);
             if num == target {
-                println!("{:0x}: {}", offset, num);
                 addr_list.push(Address { addr: offset });
             }
         }
 
         return Some(addr_list);
+    }
+
+    // Tests if addr is in the region, start and end inclusive
+    pub fn in_region(&self, addr: &Address) -> bool {
+        if self.addr_range.start.addr <= addr.addr && addr.addr <= self.addr_range.end.addr {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Reads value from address and returns it
+    pub fn read_addr(&self, addr: &Address) -> Option<u32> {
+        if !self.perms.read {
+            return None;
+        }
+
+        let mut f = match File::open(format!("{}/mem", self.pathname)) {
+            Ok(f) => f,
+            Err(e) => panic!("cannot open {}/mem: {e}", self.pathname),
+        };
+
+        let mut buffer = [0_u8; 4];
+        self.read_4_bytes(&mut f, addr.addr, &mut buffer);
+        Some(Self::as_u32(&buffer))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod in_region {
+        use super::super::*;
+        fn setup() -> MemoryRegion {
+            MemoryRegion {
+                addr_range: address::Range {
+                    start: Address { addr: 1 },
+                    end: Address { addr: 100 },
+                },
+                perms: Perms {
+                    read: true,
+                    write: false,
+                    execute: false,
+                    shared: false,
+                    private: false,
+                },
+                offset: Address { addr: 123 },
+                pathname: "/proc/0".to_string(),
+            }
+        }
+        #[test]
+        fn start_inclusive() {
+            let region = setup();
+            let addr = Address { addr: 1 };
+            assert!(region.in_region(&addr));
+        }
+
+        #[test]
+        fn end_inclusive() {
+            let region = setup();
+            let addr = Address { addr: 100 };
+            assert!(region.in_region(&addr));
+        }
+
+        #[test]
+        fn inside() {
+            let region = setup();
+            let addr = Address { addr: 50 };
+            assert!(region.in_region(&addr));
+        }
+
+        #[test]
+        fn out_above_range() {
+            let region = setup();
+            let addr = Address { addr: 101 };
+            assert!(!region.in_region(&addr));
+        }
+
+        #[test]
+        fn outside_below_range() {
+            let region = setup();
+            let addr = Address { addr: 0 };
+            assert!(!region.in_region(&addr));
+        }
     }
 }

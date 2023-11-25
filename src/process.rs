@@ -42,6 +42,7 @@ impl Process {
 
             regions.push(region);
         }
+        println!("{} regions", regions.len());
         return regions;
     }
 }

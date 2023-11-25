@@ -67,11 +67,35 @@ fn get_target(proc: &Process, target: u32) -> Vec<Address> {
     return addr_list;
 }
 
+fn get_target_from_list(proc: &Process, list: &Vec<Address>, target: u32) -> Vec<Address> {
+    let mut addr_list = Vec::<Address>::new();
+    for region in proc.get_all_memory_regions() {
+        for addr in list {
+            if !region.in_region(addr) {
+                continue;
+            }
+
+            match region.read_addr(addr) {
+                Some(a) => {
+                    if a == target {
+                        addr_list.push(addr.clone())
+                    }
+                }
+                None => (),
+            }
+        }
+    }
+
+    return addr_list;
+}
+
 fn main() {
     let proc = match get_proc_by_name("decrement") {
         None => panic!("Unable to find process!"),
         Some(p) => p,
     };
+
+    println!("{:?}: {:?}", proc.pid, proc.name());
 
     let mut addr_list: Vec<Address> = Vec::<Address>::new();
     let mut old_addr_list: Vec<Address> = Vec::<Address>::new();
@@ -84,6 +108,7 @@ fn main() {
         let target: u32 = match line.trim().parse() {
             Ok(num) => num,
             Err(e) => {
+                print!("{:?}", addr_list);
                 println!("Error: {}", e);
                 continue;
             }
@@ -92,10 +117,11 @@ fn main() {
         /* run this once to get the lists started */
         if old_addr_list.len() == 0 {
             addr_list = get_target(&proc, target);
+            continue;
         }
 
         old_addr_list = addr_list.clone();
-        addr_list = get_target(&proc, target);
+        addr_list = get_target_from_list(&proc, &old_addr_list, target);
         addr_list = addr_list
             .clone()
             .into_iter()
