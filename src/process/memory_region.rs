@@ -1,7 +1,7 @@
 use crate::process::address;
 use std::fmt;
 use std::fs::File;
-use std::io::{self, prelude::*, SeekFrom};
+use std::io::{prelude::*, SeekFrom};
 
 use super::address::Address;
 
@@ -32,12 +32,10 @@ impl fmt::Display for Perms {
             if self.execute { "x" } else { "-" },
             if self.private {
                 "p"
+            } else if self.shared {
+                "s"
             } else {
-                if self.shared {
-                    "s"
-                } else {
-                    "-"
-                }
+                "-"
             }
         )
     }
@@ -116,29 +114,29 @@ impl MemoryRegion {
             None => "".to_string(),
         };
 
-        return Some(MemoryRegion {
+        Some(MemoryRegion {
             addr_range,
             perms,
             offset,
             pathname,
-        });
+        })
     }
 
     fn read_4_bytes(&self, f: &mut File, offset: u64, buffer: &mut [u8]) -> u64 {
         let _ = f.read_exact(buffer);
         let _ = f.seek(SeekFrom::Start(offset));
-        return offset + buffer.len() as u64;
+        offset + buffer.len() as u64
     }
 
     pub fn as_u32_be(array: &[u8; 4]) -> u32 {
         ((array[0] as u32) << 24)
             + ((array[1] as u32) << 16)
             + ((array[2] as u32) << 8)
-            + ((array[3] as u32) << 0)
+            + (array[3] as u32)
     }
 
     fn as_u32_le(array: &[u8; 4]) -> u32 {
-        ((array[0] as u32) << 0)
+        (array[0] as u32)
             + ((array[1] as u32) << 8)
             + ((array[2] as u32) << 16)
             + ((array[3] as u32) << 24)
@@ -180,7 +178,7 @@ impl MemoryRegion {
                 addr_list.push(addr.clone());
             }
         }
-        return Some(addr_list);
+        Some(addr_list)
     }
 
     pub fn read_mem(&self, pid: u32, target: u32) -> Option<Vec<Address>> {
@@ -206,16 +204,12 @@ impl MemoryRegion {
             }
         }
 
-        return Some(addr_list);
+        Some(addr_list)
     }
 
     // Tests if addr is in the region, start and end inclusive
     pub fn in_region(&self, addr: &Address) -> bool {
-        if self.addr_range.start.addr <= addr.addr && addr.addr <= self.addr_range.end.addr {
-            true
-        } else {
-            false
-        }
+        self.addr_range.start.addr <= addr.addr && addr.addr <= self.addr_range.end.addr
     }
 
     /// Reads value from address and returns it

@@ -37,14 +37,14 @@ fn get_all_pids() -> Option<Vec<Process>> {
         }
     }
 
-    if procs.len() > 0 {
+    if !procs.is_empty() {
         return Some(procs);
     }
-    return None;
+    None
 }
 
 fn get_proc_by_name(name: &str) -> Option<Process> {
-    let procs = get_all_pids().unwrap_or(Vec::new());
+    let procs = get_all_pids().unwrap_or_default();
     let mut procs = procs.iter();
     procs.find_map(|proc| match proc.name().unwrap().contains(name) {
         true => Some(Process { pid: proc.pid }),
@@ -55,16 +55,13 @@ fn get_proc_by_name(name: &str) -> Option<Process> {
 fn get_target(proc: &Process, target: u32) -> Vec<Address> {
     let mut addr_list = Vec::<Address>::new();
     for region in proc.get_all_memory_regions() {
-        match region.read_mem(proc.pid, target) {
-            Some(a) => {
-                let mut b = a;
-                addr_list.append(&mut b)
-            }
-            None => (),
+        if let Some(a) = region.read_mem(proc.pid, target) {
+            let mut b = a;
+            addr_list.append(&mut b)
         }
     }
 
-    return addr_list;
+    addr_list
 }
 
 fn get_target_from_list(proc: &Process, list: &Vec<Address>, target: u32) -> Vec<Address> {
@@ -75,18 +72,15 @@ fn get_target_from_list(proc: &Process, list: &Vec<Address>, target: u32) -> Vec
                 continue;
             }
 
-            match region.read_addr(addr) {
-                Some(a) => {
-                    if a == target {
-                        addr_list.push(addr.clone())
-                    }
+            if let Some(a) = region.read_addr(addr) {
+                if a == target {
+                    addr_list.push(addr.clone())
                 }
-                None => (),
             }
         }
     }
 
-    return addr_list;
+    addr_list
 }
 
 fn main() {
@@ -115,7 +109,7 @@ fn main() {
         };
 
         /* run this once to get the lists started */
-        if old_addr_list.len() == 0 {
+        if old_addr_list.is_empty() {
             addr_list = get_target(&proc, target);
             continue;
         }

@@ -17,24 +17,24 @@ impl Process {
         let path = Path::new(&path_string);
 
         match fs::read_to_string(path) {
-            Ok(name) => return Ok(name),
+            Ok(name) => Ok(name),
             Err(e) => {
                 eprintln!("Failed to read /proc/{}/cmdline: {}", self.pid, e);
-                return Err(e);
+                Err(e)
             }
         }
     }
 
     pub fn get_all_memory_regions(&self) -> Vec<MemoryRegion> {
-        let maps_path = String::from(format!("/proc/{}/maps", self.pid));
-        let contents = match fs::read_to_string(&maps_path) {
+        let maps_path = format!("/proc/{}/maps", self.pid);
+        let contents = match fs::read_to_string(maps_path) {
             Err(e) => panic!("ERROR {}: Cannot access /proc/{}/maps", e, self.pid),
             Ok(maps) => maps,
         };
 
         let mut regions: Vec<MemoryRegion> = Vec::<MemoryRegion>::new();
 
-        for line in contents.split("\n").into_iter() {
+        for line in contents.split('\n') {
             let region = match MemoryRegion::new_from_str(line) {
                 Some(region) => region,
                 None => continue,
@@ -43,7 +43,7 @@ impl Process {
             regions.push(region);
         }
         println!("{} regions", regions.len());
-        return regions;
+        regions
     }
 }
 
@@ -53,9 +53,9 @@ impl Process {
             return None;
         }
         if Path::new(&format!("/proc/{}/", pid)).exists() {
-            return Some(Self { pid });
+            Some(Self { pid })
         } else {
-            return None;
+            None
         }
     }
 }

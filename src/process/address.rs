@@ -19,10 +19,10 @@ impl fmt::Display for Address {
 
 impl Address {
     pub fn new_from_str(addr_str: &str) -> Option<Self> {
-        return match u64::from_str_radix(addr_str, 16) {
+        match u64::from_str_radix(addr_str, 16) {
             Err(_) => None,
             Ok(addr) => Some(Address { addr }),
-        };
+        }
     }
 }
 
@@ -35,7 +35,7 @@ impl fmt::Display for Range {
 impl Range {
     pub fn new_from_str(s: &str) -> Self {
         /* Parses the first split into a AddressRange*/
-        let mut a = s.split("-");
+        let mut a = s.split('-');
 
         let start = match a.next() {
             None => panic!("cannot make addr from str"),
